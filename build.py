@@ -47,7 +47,7 @@ def post_build():
             if src.exists():
                 shutil.copy2(src, dist_app)
 
-        print(f"\n✅ Build ready at: {dist_app}")
+        print(f"\nBuild ready at: {dist_app}")
         print("You can zip this folder and distribute it.")
     else:
         print("Warning: Expected output folder not found.")
