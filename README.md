@@ -98,12 +98,25 @@ WinMacros is currently in **early public release (v0.9.0)**. Please be aware of 
 
 **Use at your own risk.** Input automation tools can interfere with other software.
 
+## Building a Standalone Executable
+
+We now have a proper build system:
+
+```powershell
+pip install pyinstaller
+python build.py
+```
+
+The resulting application will be in `dist/WinMacros/`.
+
+A pre-built .exe will be provided in future releases.
+
 ## Future Plans
 
-- Standalone .exe build (PyInstaller)
-- Better visibility of active toggle macros
+- Pre-built standalone .exe releases
+- Better visibility of active toggle macros in the UI
 - Import / Export of macro sets
-- More robust input backend (possible migration to pynput or Windows SendInput directly)
+- Full migration to pynput for more reliable input simulation
 - Per-macro logging and error reporting
 
 ## Contributing
