@@ -1,19 +1,23 @@
 # WinMacros
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Platform](https://img.shields.io/badge/platform-Windows-blue)
+
 A simple, effective, and lightweight macros tool for Windows.
 
-Create text-insertion macros, assign global hotkeys, toggle them on/off, and run them from anywhere.
+Create powerful macros with global hotkeys, including text insertion, key repeats, mouse button control (including toggle hold), and **Turbo Key** mode (multi-press on physical key presses).
 
-## Features (v1)
+## Features
 
-- **Create macros** with a name and the text they should insert
-- **Global hotkeys** — works in any application (Ctrl+Alt+... etc.)
-- **Enable / disable** individual macros instantly
-- **Test** any macro immediately
-- **Capture hotkeys** with a single click (no manual typing)
-- **Runs in the background** via system tray
-- **Persists** all your macros automatically
-- Clean modern UI (Windows 11 friendly)
+- **Text Insertion** — Type or paste text on hotkey (with speed control)
+- **Key Repeat** — Press any key multiple times with one hotkey
+- **Mouse Button Actions** — Click, double-click, or **toggle-hold** mouse buttons
+- **Turbo Key** — Turn on a mode where every physical press of a key (e.g. Space) is repeated X times
+- **Toggle Mode** — Hotkeys can turn macros ON/OFF (perfect for mouse hold and turbo)
+- Global hotkeys that work in any application
+- System tray support (runs in background)
+- Clean modern UI (Windows 11 friendly with CustomTkinter)
+- Persistent macros (saved in `%APPDATA%`)
 
 ## Installation
 
