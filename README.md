@@ -79,6 +79,42 @@ All macros are saved to:
 
 You can back this file up or copy it to another machine.
 
+## Requirements
+
+- Windows 10 or Windows 11
+- Python 3.10 or newer
+- Administrator rights are **strongly recommended** for reliable global hotkeys (especially with Turbo Key and Mouse actions)
+
+## Known Limitations & Warnings
+
+WinMacros is currently in **early public release (v0.9.0)**. Please be aware of the following:
+
+- **Input simulation is not 100% reliable** — Some games, fullscreen applications, and certain Electron apps may ignore or partially receive simulated input.
+- **Turbo Key mode** can feel laggy or inconsistent in high-performance scenarios.
+- The underlying libraries (`keyboard` + `pyautogui`) sometimes require running the program **as Administrator**.
+- There is currently **no standalone executable**. You must have Python installed.
+- Complex combinations of toggle + turbo macros can occasionally conflict.
+- No built-in way yet to see which toggle macros are currently active from the UI.
+
+**Use at your own risk.** Input automation tools can interfere with other software.
+
+## Future Plans
+
+- Standalone .exe build (PyInstaller)
+- Better visibility of active toggle macros
+- Import / Export of macro sets
+- More robust input backend (possible migration to pynput or Windows SendInput directly)
+- Per-macro logging and error reporting
+
+## Contributing
+
+This project is currently maintained by one person. Bug reports, feature suggestions, and pull requests are welcome.
+
+## License
+
+MIT License — see [LICENSE](LICENSE) file.
+
+
 ## Tips & Notes
 
 - Some games and certain full-screen apps may not receive simulated input (Windows security / UIPI).
