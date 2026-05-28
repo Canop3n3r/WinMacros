@@ -23,7 +23,7 @@ from typing import Optional, Dict, Any, List, Set
 
 # ----------------------------- Config -----------------------------
 APP_NAME = "WinMacros"
-APP_VERSION = "1.0.0"
+APP_VERSION = "0.9.0"
 DATA_DIR = Path(os.getenv("APPDATA", str(Path.home()))) / APP_NAME
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 MACROS_FILE = DATA_DIR / "macros.json"
