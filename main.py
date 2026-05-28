@@ -463,6 +463,9 @@ class WinMacrosApp(ctk.CTk):
 
         self._set_status("Ready — macros active in background")
 
+        # Warn if not running as admin (common cause of hook failures)
+        self._check_admin_rights()
+
     # ---------------- UI Construction ----------------
     def _build_ui(self):
         # Header
@@ -551,6 +554,18 @@ class WinMacrosApp(ctk.CTk):
 
     def _set_status(self, text: str):
         self.status_label.configure(text=text)
+
+    def _check_admin_rights(self):
+        """Show a one-time warning if not running as administrator."""
+        try:
+            import ctypes
+            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+            if not is_admin:
+                self.after(1500, lambda: self._set_status(
+                    "⚠ Not running as Administrator — some macros may not work reliably"
+                ))
+        except Exception:
+            pass
 
     # ---------------- Macro List ----------------
     def refresh_list(self):
