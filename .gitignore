@@ -38,3 +38,13 @@ WinMacros/
 # OS
 .DS_Store
 Thumbs.db
+
+# Build artifacts (PyInstaller)
+build/
+dist/
+*.spec.bak
+WinMacros.exe
+*.log
+
+# PyInstaller generated
+*.manifest

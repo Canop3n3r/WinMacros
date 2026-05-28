@@ -10,6 +10,8 @@ import customtkinter as ctk
 from tkinter import messagebox
 import keyboard
 import pyautogui
+from pynput import keyboard as pynput_keyboard
+from pynput.mouse import Controller as MouseController
 import pystray
 from PIL import Image, ImageDraw, ImageFont
 import threading
@@ -50,6 +52,71 @@ ACTION_TYPE_LABELS = {
     "turbo_key": "Turbo Key (multi-press on physical key)",
 }
 
+# =============================================================================
+# NEW: Input Controller Abstraction (Migration toward pynput)
+# This is the foundation for a more reliable input backend.
+# Currently uses pynput for mouse + key actions, falling back to pyautogui where needed.
+# Long-term goal: Move all input simulation here and eventually replace keyboard lib.
+# =============================================================================
+class InputController:
+    """Unified interface for mouse and keyboard simulation."""
+
+    def __init__(self):
+        self.mouse = MouseController()
+        self._pynput_kb = pynput_keyboard.Controller()
+
+    # --- Mouse ---
+    def mouse_click(self, button: str = "left"):
+        btn = self._map_button(button)
+        self.mouse.click(btn)
+
+    def mouse_double_click(self, button: str = "left"):
+        btn = self._map_button(button)
+        self.mouse.click(btn)
+        time.sleep(0.05)
+        self.mouse.click(btn)
+
+    def mouse_down(self, button: str = "left"):
+        btn = self._map_button(button)
+        self.mouse.press(btn)
+
+    def mouse_up(self, button: str = "left"):
+        btn = self._map_button(button)
+        self.mouse.release(btn)
+
+    def _map_button(self, button: str):
+        from pynput.mouse import Button
+        button = button.lower()
+        return {
+            "left": Button.left,
+            "right": Button.right,
+            "middle": Button.middle,
+        }.get(button, Button.left)
+
+    # --- Keyboard ---
+    def key_press(self, key: str, presses: int = 1, interval: float = 0.0):
+        """Press a key multiple times."""
+        key = key.lower().strip()
+        for i in range(presses):
+            if i > 0 and interval > 0:
+                time.sleep(interval)
+            try:
+                self._pynput_kb.press(key)
+                self._pynput_kb.release(key)
+            except Exception:
+                # Fallback to pyautogui for special keys
+                pyautogui.press(key)
+
+    def write_text(self, text: str, interval: float = 0.0):
+        """Type a string of text."""
+        # pynput has type() but pyautogui is more reliable for long text
+        pyautogui.write(text, interval=interval)
+
+    def press_combination(self, keys: str):
+        """Example: 'ctrl+c' """
+        pyautogui.hotkey(*keys.split("+"))  # simple fallback for now
+
+
 # ----------------------------- Macro Manager -----------------------------
 class MacroManager:
     """Handles loading, saving, hotkey registration, and execution for all macro types."""
@@ -60,6 +127,10 @@ class MacroManager:
         self.toggled_active: Set[str] = set()          # macro ids that are currently "on" (for toggle mode)
         self.turbo_hooks: Dict[str, Any] = {}          # source_key -> hook handle for turbo macros
         self.held_mouse_buttons: Set[str] = set()      # currently held mouse buttons via toggle
+
+        # Unified input controller (pynput foundation - migration in progress)
+        self.input = InputController()
+
         self.load()
 
     def load(self):
@@ -238,19 +309,19 @@ class MacroManager:
     def _set_mouse_button(self, button: str, down: bool):
         try:
             if down:
-                pyautogui.mouseDown(button=button)
+                self.input.mouse_down(button)
                 self.held_mouse_buttons.add(button)
             else:
-                pyautogui.mouseUp(button=button)
+                self.input.mouse_up(button)
                 self.held_mouse_buttons.discard(button)
         except Exception as e:
             print(f"[WinMacros] Mouse button error ({button} {'down' if down else 'up'}): {e}")
 
     def _temp_mouse_hold(self, button: str, seconds: float):
         try:
-            pyautogui.mouseDown(button=button)
+            self.input.mouse_down(button)
             time.sleep(seconds)
-            pyautogui.mouseUp(button=button)
+            self.input.mouse_up(button)
         except Exception as e:
             print(f"[WinMacros] Temp mouse hold error: {e}")
 
@@ -371,7 +442,7 @@ class MacroManager:
         if not key:
             return
         try:
-            pyautogui.press(key, presses=count, interval=interval)
+            self.input.key_press(key, presses=count, interval=interval)
         except Exception as e:
             print(f"[WinMacros] key_repeat error: {e}")
 
@@ -381,22 +452,22 @@ class MacroManager:
 
         try:
             if maction == "click":
-                pyautogui.click(button=button)
+                self.input.mouse_click(button)
             elif maction == "double_click":
-                pyautogui.doubleClick(button=button)
+                self.input.mouse_double_click(button)
             elif maction == "toggle_hold":
-                # This is normally driven by toggle state, but allow direct use
+                # Toggle state handled in manager; here we just flip
                 if button in self.held_mouse_buttons:
-                    pyautogui.mouseUp(button=button)
+                    self.input.mouse_up(button)
                     self.held_mouse_buttons.discard(button)
                 else:
-                    pyautogui.mouseDown(button=button)
+                    self.input.mouse_down(button)
                     self.held_mouse_buttons.add(button)
             elif maction == "hold_duration":
                 dur = max(0.01, int(action.get("hold_duration_ms", 500)) / 1000.0)
-                pyautogui.mouseDown(button=button)
+                self.input.mouse_down(button)
                 time.sleep(dur)
-                pyautogui.mouseUp(button=button)
+                self.input.mouse_up(button)
         except Exception as e:
             print(f"[WinMacros] mouse action error: {e}")
 
