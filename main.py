@@ -1019,11 +1019,23 @@ class WinMacrosApp(ctk.CTk):
                 dialog._action_widgets["mode_var"] = mv
 
             elif atype == "key_repeat":
-                ctk.CTkLabel(action_frame, text="Key to repeat (e.g. space, f5, enter, a)", font=ctk.CTkFont(weight="bold")).pack(anchor="w")
-                key_entry = ctk.CTkEntry(action_frame, placeholder_text="space")
-                key_entry.pack(fill="x", pady=4)
+                ctk.CTkLabel(action_frame, text="Key to repeat (use Capture Key button)", font=ctk.CTkFont(weight="bold")).pack(anchor="w")
+
+                key_row = ctk.CTkFrame(action_frame, fg_color="transparent")
+                key_row.pack(fill="x", pady=4)
+
+                key_entry = ctk.CTkEntry(key_row, placeholder_text="space")
+                key_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
                 key_entry.insert(0, current_action.get("key", "space"))
                 dialog._action_widgets["key_entry"] = key_entry
+
+                capture_key_btn = ctk.CTkButton(
+                    key_row,
+                    text="Capture Key",
+                    width=100,
+                    command=lambda: self._capture_single_key(dialog, key_entry)
+                )
+                capture_key_btn.pack(side="left")
 
                 row = ctk.CTkFrame(action_frame, fg_color="transparent")
                 row.pack(fill="x", pady=4)
@@ -1060,11 +1072,23 @@ class WinMacrosApp(ctk.CTk):
             elif atype == "turbo_key":
                 ctk.CTkLabel(action_frame, text="Every time you physically press this key → it will be sent multiple times", font=ctk.CTkFont(weight="bold")).pack(anchor="w", pady=(0, 6))
 
-                ctk.CTkLabel(action_frame, text="Physical key to watch (e.g. space, w, mouse_left, f)").pack(anchor="w")
-                src_entry = ctk.CTkEntry(action_frame, placeholder_text="space")
-                src_entry.pack(fill="x", pady=4)
+                ctk.CTkLabel(action_frame, text="Physical key to watch (keyboard keys work best: space, w, f5, etc.)").pack(anchor="w")
+
+                turbo_row = ctk.CTkFrame(action_frame, fg_color="transparent")
+                turbo_row.pack(fill="x", pady=4)
+
+                src_entry = ctk.CTkEntry(turbo_row, placeholder_text="space")
+                src_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
                 src_entry.insert(0, current_action.get("source_key", "space"))
                 dialog._action_widgets["turbo_source"] = src_entry
+
+                capture_turbo_btn = ctk.CTkButton(
+                    turbo_row,
+                    text="Capture Key",
+                    width=100,
+                    command=lambda: self._capture_single_key(dialog, src_entry)
+                )
+                capture_turbo_btn.pack(side="left")
 
                 row = ctk.CTkFrame(action_frame, fg_color="transparent")
                 row.pack(fill="x", pady=4)
@@ -1123,18 +1147,33 @@ class WinMacrosApp(ctk.CTk):
 
             elif atype == "key_repeat":
                 action_data["key"] = w.get("key_entry").get().strip().lower() if "key_entry" in w else "space"
-                action_data["count"] = int(w.get("key_count_var").get() or 5) if "key_count_var" in w else 5
-                action_data["interval_ms"] = int(w.get("key_interval_var").get() or 30) if "key_interval_var" in w else 30
+                try:
+                    action_data["count"] = max(1, int(w.get("key_count_var").get() or 5))
+                except (ValueError, TypeError):
+                    action_data["count"] = 5
+                try:
+                    action_data["interval_ms"] = max(0, int(w.get("key_interval_var").get() or 30))
+                except (ValueError, TypeError):
+                    action_data["interval_ms"] = 30
 
             elif atype == "mouse":
                 action_data["button"] = w.get("mouse_btn_var").get() if "mouse_btn_var" in w else "left"
                 action_data["mouse_action"] = w.get("mouse_action_var").get() if "mouse_action_var" in w else "click"
-                action_data["hold_duration_ms"] = int(w.get("mouse_dur_var").get() or 600) if "mouse_dur_var" in w else 600
+                try:
+                    action_data["hold_duration_ms"] = max(10, int(w.get("mouse_dur_var").get() or 600))
+                except (ValueError, TypeError):
+                    action_data["hold_duration_ms"] = 600
 
             elif atype == "turbo_key":
                 action_data["source_key"] = w.get("turbo_source").get().strip().lower() if "turbo_source" in w else "space"
-                action_data["count"] = int(w.get("turbo_count").get() or 10) if "turbo_count" in w else 10
-                action_data["interval_ms"] = int(w.get("turbo_interval").get() or 8) if "turbo_interval" in w else 8
+                try:
+                    action_data["count"] = max(1, int(w.get("turbo_count").get() or 10))
+                except (ValueError, TypeError):
+                    action_data["count"] = 10
+                try:
+                    action_data["interval_ms"] = max(0, int(w.get("turbo_interval").get() or 8))
+                except (ValueError, TypeError):
+                    action_data["interval_ms"] = 8
 
             new_macro = {
                 "id": macro["id"] if macro else str(uuid.uuid4()),
@@ -1203,6 +1242,35 @@ class WinMacrosApp(ctk.CTk):
                 self.after(0, lambda: update_display_callback(f"Capture failed: {e}"))
             finally:
                 # Always restore hotkeys
+                self.after(0, self._register_hotkeys)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _capture_single_key(self, dialog, entry_widget):
+        """Capture a single key press for Repeat Key or Turbo Key fields."""
+        def worker():
+            try:
+                self.manager.unregister_hotkeys()
+
+                # Visual feedback
+                original_text = entry_widget.get()
+                self.after(0, lambda: entry_widget.delete(0, "end"))
+                self.after(0, lambda: entry_widget.insert(0, "Press key now..."))
+
+                # Use read_key for a single key (better than read_hotkey for this use case)
+                key = keyboard.read_key(suppress=True)
+
+                # Normalize
+                key = key.lower().strip()
+
+                self.after(0, lambda: entry_widget.delete(0, "end"))
+                self.after(0, lambda: entry_widget.insert(0, key))
+
+            except Exception as e:
+                self.after(0, lambda: entry_widget.delete(0, "end"))
+                self.after(0, lambda: entry_widget.insert(0, original_text))
+                print(f"[WinMacros] Single key capture error: {e}")
+            finally:
                 self.after(0, self._register_hotkeys)
 
         threading.Thread(target=worker, daemon=True).start()
